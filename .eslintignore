@@ -1,0 +1,6 @@
+/dist
+/node_modules
+**/node_modules/**
+./node_modules/**
+/logs
+/<node_internals>/**

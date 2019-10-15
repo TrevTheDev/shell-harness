@@ -1,0 +1,12 @@
+{
+    "mocha.node_options": ["-r","esm"],
+    "mocha.requires": [
+      "esm",
+      "mocha-steps"
+    ],
+    "mocha.options": {
+      "timeout": 3600000
+    },
+    "mocha.files.glob": "src/**/*.test.js",
+    "mocha.parallelTests": 1
+}

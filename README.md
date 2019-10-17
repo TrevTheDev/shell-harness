@@ -24,6 +24,7 @@ npm install shell-harness
     console.log(cmd.output) // HELLO
 
 All shell commands or scripts must terminate with a ;
+
 All stderr output is redirected to stdout via 2>&1 (hack required as Node does not process stdout and stderr sequentially)
 
 ## Interact with the shell

@@ -6,23 +6,19 @@ export const LOCAL = {
 
 export const DEFAULT_CONFIG = {
   shell: '/bin/sh',
-  spawnArgs: ['-s'],
   spawnOptions: {stdio: ['pipe', 'pipe', 'pipe', 'ipc']},
-  initScript: `${process.cwd()}/src/init.sh`,
 
-  elevator: undefined,
+  initScript: undefined,
+
+  doneCallback: undefined,
 
   user: undefined,
   rootPassword: undefined,
-  uid: undefined,
-  gid: undefined,
 
   numberOfProcesses: 1,
-  doneMarker: '__done__',
   concurrentCmds: 100,
 
-  cmdDivider: '___EOC___',
-  fileDivider: '___EOG___',
+  doneMarker: '__done__',
 
   log: true
 }

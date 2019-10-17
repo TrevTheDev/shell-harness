@@ -1,2 +1,0 @@
-CMDDIVIDER='___EOC___';
-GRPDIVIDER='___EOG___';

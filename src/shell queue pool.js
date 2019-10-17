@@ -2,7 +2,73 @@ import {LOCAL} from './globals'
 import Command from './command'
 import ShellQueue from './shell queue'
 
-const fsPromises = require('fs').promises
+// const fsPromises = require('fs').promises
+
+const initShellQueue = async shellQueuePool => {
+  const shellQueue = new ShellQueue(shellQueuePool)
+
+  if (shellQueuePool.config.user) {
+    if (!shellQueuePool.config.rootPassword)
+      throw new Error(LOCAL.rootPasswordRequiredToChangeUser)
+
+    const sudo = new Command(
+      shellQueuePool,
+      `sudo -p PaxsWord -S su ${shellQueuePool.config.user};\n`,
+      // `sudo --user=#${shellQueuePool.config.uid} --group=#${shellQueuePool.config.gid} -p PaxsWord -S su ${shellQueuePool.config.user};\n`,
+      undefined,
+      undefined,
+      false,
+      shellQueue
+    )
+
+    sudo.on('data', stdout => {
+      if (stdout !== 'PaxsWord') {
+        shellQueue.shutdown()
+        if (stdout.includes('No passwd entry for user'))
+          throw new Error(`${LOCAL.noSuchUser}: ${shellQueuePool.config.user}`)
+        if (stdout.includes('Sorry, try again.'))
+          throw new Error(`${LOCAL.wrongPassword}`)
+        throw new Error(`login failed: ${stdout}`)
+      }
+      sudo.stdin.write(`${shellQueuePool.config.rootPassword}\n`)
+      sudo.sendDoneMarker()
+    })
+
+    await sudo
+
+    const whoami = await new Command(
+      shellQueuePool,
+      'whoami;',
+      undefined,
+      undefined,
+      true,
+      shellQueue
+    )
+
+    if (whoami.output !== `${shellQueuePool.config.user}\n`) {
+      shellQueue.shutdown()
+      throw new Error(`not logged in as ${shellQueuePool.config.user}`)
+    }
+  }
+
+  if (shellQueuePool.config.initScript) {
+    // initScript = await fsPromises.readFile(
+    //   shellQueuePool.config.initScript,
+    //   'utf8'
+    // )
+
+    await new Command(
+      shellQueuePool,
+      shellQueuePool.config.initScript,
+      undefined,
+      undefined,
+      undefined,
+      shellQueue
+    )
+  }
+
+  return shellQueue
+}
 
 /**
  * A pool of ShellQueues - each ShellQueue has one shell.  Incoming commands/scripts
@@ -11,76 +77,6 @@ const fsPromises = require('fs').promises
  * @export
  * @class ShellQueuePool
  */
-
-const initShellQueue = async shellQueuePool => {
-  const shellQueue = new ShellQueue(shellQueuePool)
-  const initScript = await fsPromises.readFile(
-    shellQueuePool.config.initScript,
-    'utf8'
-  )
-
-  await new Command(
-    shellQueuePool,
-    initScript,
-    undefined,
-    undefined,
-    undefined,
-    shellQueue
-  )
-
-  if (!shellQueuePool.config.user) return shellQueue
-
-  if (!shellQueuePool.config.rootPassword)
-    throw new Error(LOCAL.rootPasswordRequiredToChangeUser)
-
-  const sudo = new Command(
-    shellQueuePool,
-    `sudo --user=#${shellQueuePool.config.uid} --group=#${shellQueuePool.config.gid} -p PaxsWord -S su ${shellQueuePool.config.user};\n`,
-    undefined,
-    undefined,
-    false,
-    shellQueue
-  )
-
-  sudo.on('data', (runningCmd, stdout) => {
-    if (stdout !== 'PaxsWord') {
-      shellQueue.shutdown()
-      if (stdout.includes('No passwd entry for user'))
-        throw new Error(`${LOCAL.noSuchUser}: ${shellQueuePool.config.user}`)
-      if (stdout.includes('Sorry, try again.'))
-        throw new Error(`${LOCAL.wrongPassword}`)
-      throw new Error(`login failed: ${stdout}`)
-    }
-    runningCmd.stdin.write(`${shellQueuePool.config.rootPassword}\n`)
-    runningCmd.sendDoneMarker()
-  })
-
-  await sudo
-
-  await new Command(
-    shellQueuePool,
-    initScript,
-    undefined,
-    undefined,
-    undefined,
-    shellQueue
-  )
-
-  const whoami = await new Command(
-    shellQueuePool,
-    'whoami;',
-    undefined,
-    undefined,
-    undefined,
-    shellQueue
-  )
-
-  if (whoami.output !== `${shellQueuePool.config.user}\n`) {
-    shellQueue.shutdown()
-    throw new Error(`not logged in as ${shellQueuePool.config.user}`)
-  }
-  return shellQueue
-}
 export default class ShellQueuePool {
   constructor(scriptRunner) {
     this._scriptRunner = scriptRunner
@@ -105,15 +101,36 @@ export default class ShellQueuePool {
     return this._shells
   }
 
-  createCommand(command, elevatorCmdType, progressCallBack, autoDone = true) {
-    const cmd = new Command(
-      this,
-      command,
-      elevatorCmdType,
-      elevatorCmdType ? this.config.elevator : undefined,
-      autoDone
-    )
-    return cmd
+  /**
+   * creates a new promise that will execute the provided command
+   *
+   * @param {string} command - the command to run terminated by a semi-colon ;
+   * @param {object} [doneCBPayload] - an object to pass to the doneCallback function
+   * @param {function} [doneCallback=this.config.doneCallback] - callback function before command is completed
+   * @returns {CommandIFace} a promise that will resolve once the command is completed
+   * @memberof ShellQueuePool
+   */
+  createCommand(
+    command,
+    doneCBPayload,
+    doneCallback = this.config.doneCallback
+  ) {
+    return new Command(this, command, doneCBPayload, doneCallback, true)
+  }
+
+  /**
+   * creates a new promise that will execute the provided command.  To complete the promise you must send
+   * cmd.sendDoneMarker()
+   *
+   * @param {string} command - the command to run terminated by a semi-colon ;
+   * @param {object} [doneCBPayload] - an object to pass to the doneCallback function
+   * @param {function} [doneCallback=this.config.doneCallback] - callback function before command is completed
+   * @returns {CommandIFace} a promise that will resolve once the command is completed
+   * @memberof ShellQueuePool
+   */
+
+  interact(command, doneCBPayload, doneCallback = this.config.doneCallback) {
+    return new Command(this, command, doneCBPayload, doneCallback, false)
   }
 
   async getQueue() {
@@ -129,6 +146,11 @@ export default class ShellQueuePool {
     return shellQueue
   }
 
+  /**
+   * cancels all queued commands and shuts down all shells
+   *
+   * @memberof ShellQueuePool
+   */
   close() {
     if (this._shells) {
       this._shells.forEach(queue => queue.shutdown())
@@ -136,9 +158,15 @@ export default class ShellQueuePool {
     }
   }
 
+  /**
+   * number of commands currently executing
+   *
+   * @readonly
+   * @memberof ShellQueuePool
+   */
   get runningCommands() {
-    if (this._shells)
-      return this._shells.reduce((a, b) => a + (b.length || 0), 0)
-    return 0
+    return this._shells
+      ? this._shells.reduce((a, b) => a + (b.length || 0), 0)
+      : 0
   }
 }

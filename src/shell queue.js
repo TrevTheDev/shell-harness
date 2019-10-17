@@ -73,6 +73,7 @@ export default class ShellQueue extends Array {
 
   enqueue(command) {
     this.push(command)
+    command.commandIFace.emit('enqueued', command.commandIFace)
     if (this.commandsRunning < this.shellQueuePool.config.concurrentCmds) {
       this.commandsRunning += 1
       command.run(this)
@@ -102,8 +103,6 @@ export default class ShellQueue extends Array {
     }
   }
 
-  /* ********************************************************************************************* */
-  /* ********************************************************************************************* */
   onData(data, stdout = true) {
     if (this.state !== 'online') return
     let cmd = this[0]

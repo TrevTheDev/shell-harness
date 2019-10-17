@@ -1,12 +1,26 @@
 {
     "mocha.node_options": ["-r","esm"],
     "mocha.requires": [
-      "esm",
-      "mocha-steps"
+      "esm"
     ],
     "mocha.options": {
       "timeout": 3600000
     },
     "mocha.files.glob": "src/**/*.test.js",
-    "mocha.parallelTests": 1
+    "mocha.parallelTests": 1,
+    "cSpell.words": [
+      "CMDOUTPUT",
+      "Cmds",
+      "HELLOBOB",
+      "Paxs",
+      "RPASSWORD",
+      "cmdline",
+      "cmdx",
+      "cmdy",
+      "passwd",
+      "printf",
+      "sudo'er",
+      "testusr",
+      "whoami"
+    ]
 }

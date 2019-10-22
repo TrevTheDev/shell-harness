@@ -52,17 +52,16 @@ const initShellQueue = async shellQueuePool => {
   }
 
   if (shellQueuePool.config.initScript) {
-    // initScript = await fsPromises.readFile(
-    //   shellQueuePool.config.initScript,
-    //   'utf8'
-    // )
+    if (shellQueuePool.config.initScript instanceof Promise)
+      // eslint-disable-next-line no-param-reassign
+      shellQueuePool.config.initScript = await shellQueuePool.config.initScript
 
     await new Command(
       shellQueuePool,
       shellQueuePool.config.initScript,
       undefined,
       undefined,
-      undefined,
+      true,
       shellQueue
     )
   }

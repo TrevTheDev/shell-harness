@@ -43,7 +43,7 @@ export default class Command {
     markerCounter += 1
     this.doneMarker = `${
       shellQueuePool.config.doneMarker
-    }${markerCounter.toString().padStart(7, '0')}`
+    }${markerCounter.toString().padStart(7, '0')}@`
     this.output = ''
     this.error = undefined
     this.dataFirstReceivedAt = undefined
@@ -115,7 +115,7 @@ export default class Command {
     this.fail(new Error('cancelled'))
   }
 
-  handleData(dataString) {
+  receiveData(dataString) {
     this.output += dataString
     if (!this.dataFirstReceivedAt) this.dataFirstReceivedAt = new Date()
     this.state = 'receiving data'

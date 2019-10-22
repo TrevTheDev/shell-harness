@@ -74,10 +74,7 @@ export default class ShellQueue extends Array {
   enqueue(command) {
     this.push(command)
     command.commandIFace.emit('enqueued', command.commandIFace)
-    if (this.commandsRunning < this.shellQueuePool.config.concurrentCmds) {
-      this.commandsRunning += 1
-      command.run(this)
-    }
+    this.topUpExecution()
   }
 
   get shellQueuePool() {
@@ -104,47 +101,29 @@ export default class ShellQueue extends Array {
   }
 
   onData(data, stdout = true) {
-    if (this.state !== 'online') return
-    let cmd = this[0]
+    let [cmd] = this
     const dataStr = data.toString()
-    if (!stdout && dataStr !== 'PaxsWord') {
-      throw new Error('unexpected stderr')
-    } // TODO: delete
+    if (!stdout && dataStr !== 'PaxsWord') throw new Error('unexpected stderr')
 
     let doneIdx = dataStr.indexOf(cmd.doneMarker, 0) - 1
     if (doneIdx === -2) {
-      cmd.handleData(dataStr) // no doneMarker - write data to the first command
+      cmd.receiveData(dataStr)
     } else {
       let startIdx = 0
-      // while we continue to find MARKER_DONE text...
+
       while (doneIdx >= 0) {
-        const inError = dataStr.substr(doneIdx, 1) !== '0'
-        cmd = this.shift()
-        if (doneIdx === 0) {
-          // No data  ... doneMarker is first
-          cmd.finish(inError)
-          this.handleCommandFinished()
-        } else {
-          // extract data up to doneMarker
-          cmd.handleData(dataStr.substring(startIdx, doneIdx))
-          cmd.finish(inError)
-          this.handleCommandFinished()
-        }
-        // determine the next "start" by which
-        // we attempt to find the next DONE marker...
+        if (doneIdx !== 0) cmd.receiveData(dataStr.substring(startIdx, doneIdx))
+        this.handleCommandFinished(dataStr.substr(doneIdx, 1) !== '0')
         ;[cmd] = this
         if (cmd) {
-          startIdx = doneIdx + cmd.doneMarker.length + 1 // one character for $?
+          startIdx = doneIdx + cmd.doneMarker.length + 1
           doneIdx = dataStr.indexOf(cmd.doneMarker, startIdx) - 1
         } else {
           doneIdx = -1
         }
       }
-      // ok, no more DONE markers.. however we might
-      // have data remaining after the marker in the buffer
-      // that we need to apply to the "next" first command in the stack
       if (startIdx < dataStr.length && cmd)
-        cmd.handleData(dataStr.slice(startIdx))
+        cmd.receiveData(dataStr.slice(startIdx))
     }
   }
 
@@ -152,11 +131,20 @@ export default class ShellQueue extends Array {
     this[0].handleMessage(message)
   }
 
-  handleCommandFinished() {
+  handleCommandFinished(inError) {
+    const cmd = this.shift()
     this.commandsRunning -= 1
-    if (this.length > this.shellQueuePool.config.concurrentCmds) {
-      this[this.commandsRunning].run(this)
-      this.commandsRunning += 1
-    }
+    this.topUpExecution()
+    cmd.finish(inError)
+  }
+
+  topUpExecution() {
+    if (this.length <= this.commandsRunning) return // all commands are running
+    if (this.commandsRunning >= this.shellQueuePool.config.concurrentCmds)
+      return // too many commands are running
+    const cmd = this[this.commandsRunning]
+    this.commandsRunning += 1
+    cmd.run(this)
+    this.topUpExecution()
   }
 }

@@ -15,7 +15,7 @@ npm install shell-harness
 
 ## Launch a shell(s)
 
-    import ShellHarness from 'shell-harness'
+    import ShellHarness from '@trevthedev/shell-harness'
     shell = new ShellHarness()
 
 ## Send a command

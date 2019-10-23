@@ -97,9 +97,11 @@ describe('shell queue', () => {
   })
 
   it('can intercept return', async () => {
-    const cb1 = (cmdx, cbData) => {
+    const cb1 = async (cmdx, cbData) => {
       expect(cbData).to.equal('HIT')
-      return true
+      const x = new Promise(resolve => setTimeout(() => resolve(true, 20)))
+      const y = await x
+      return y
     }
     const cmd = await shell.createCommand('printf HELLO ;', 'HIT', cb1)
     expect(cmd).to.be.true

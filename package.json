@@ -1,6 +1,6 @@
 {
   "name": "@trevthedev/shell-harness",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "queues and runs shell scripts",
   "keywords": [
     "shell",
@@ -9,18 +9,23 @@
     "queue",
     "spawn",
     "sh",
-    "command"
+    "command",
+    "cmd"
   ],
+  "homepage": "https://github.com/TrevTheDev/shell-harness",
+  "bugs": {
+    "url" : "https://github.com/TrevTheDev/shell-harness/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TrevTheDev/shell-harness.git"
+  },
   "main": "./src/shell harness.js",
   "scripts": {
     "test": "mocha -r esm \"src/**/*.test.js\""
   },
   "author": "Trevor Rabie",
   "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/TrevTheDev/shell-queue.git"
-  },
   "devDependencies": {
     "chai": "^4.2.0",
     "chai-as-promised": "^7.1.1",
@@ -42,5 +47,6 @@
   "type": "module",
   "engines": {
     "node": "^12.11.1"
-  }
+  },
+  "readmeFilename": "README.md"
 }

@@ -94,9 +94,9 @@ or
       if (stdout === '\n') {
         cmd.sendMessage('HELLOBOB')
         cmd.stdin.write('read -r line <&3 ; printf $line ; \n')
-      }
+      } 
+      else 
         cmd.sendDoneMarker()
-      }
     })
     const res = await cmd
     console.log(res.output) // \n"HELLOBOB"`

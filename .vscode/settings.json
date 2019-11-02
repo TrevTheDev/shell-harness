@@ -9,7 +9,9 @@
     "mocha.files.glob": "src/**/*.test.js",
     "mocha.parallelTests": 1,
     "cSpell.words": [
+      "CMDHMSG",
       "CMDOUTPUT",
+      "CMDSMSG",
       "Cmds",
       "HELLOBOB",
       "Paxs",
@@ -17,6 +19,7 @@
       "cmdline",
       "cmdx",
       "cmdy",
+      "maxsize",
       "passwd",
       "printf",
       "sudo'er",

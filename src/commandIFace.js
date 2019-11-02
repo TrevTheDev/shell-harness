@@ -7,9 +7,8 @@ export default class CommandIFace extends EventEmitter {
     this._command = command
   }
 
-  then() {
-    // eslint-disable-next-line prefer-rest-params
-    return this._command.promise.then(...arguments)
+  then(...pmsArgs) {
+    return this._command.promise.then(...pmsArgs)
   }
 
   /**

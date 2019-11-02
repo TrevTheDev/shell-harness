@@ -20,7 +20,17 @@ export const DEFAULT_CONFIG = {
 
   doneMarker: '__done__',
 
-  log: true
+  log: true,
+  winstonLog: {
+    level: 'debug',
+    filename: `./logs/app.log`,
+    handleExceptions: true,
+    maxsize: 5242880, // 5MB
+    maxFiles: 1,
+    colorize: false,
+    options: {flags: 'w'}
+  },
+  winstonExceptionLog: {
+    filename: './logs/exceptions.log'
+  }
 }
-
-export const glob = {}

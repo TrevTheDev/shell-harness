@@ -56,6 +56,13 @@ describe('shell queue', () => {
     expect(outcome.output).to.equal(`what is your name?\nBob\n`)
   })
 
+  it('fails if stdout', async () => {
+    const cmdF = shell.interact('echo stdOutNotSupported 1>&2;\n')
+    await expect(cmdF).to.be.rejected
+    const cmd = await shell.createCommand('printf HELLO ;')
+    expect(cmd.output).to.equal(`HELLO`)
+  })
+
   it('provides a root shell', async () => {
     const rootShell = new ShellHarness({
       user: 'root',
@@ -142,5 +149,20 @@ describe('shell queue', () => {
     })
     const res = await cmd
     expect(res.output).to.equal(`\n"HELLOBOB"`)
+  })
+
+  it('send same command to every queue', async () => {
+    const rootShell = new ShellHarness({
+      numberOfProcesses: 5
+    })
+    let cmds = rootShell.createCommand('echo $$ ;', undefined, undefined, true)
+    // expect(cmds.length).to.equal(5)
+    const res = await expect(cmds).to.be.fulfilled
+    expect(res.length).to.equal(5)
+    await rootShell.createCommand('cd /home ;')
+    cmds = await rootShell.createCommand('pwd ;', undefined, undefined, true)
+    cmds = await rootShell.createCommand('cd / ;', undefined, undefined, true)
+    cmds = await rootShell.createCommand('pwd ;', undefined, undefined, true)
+    rootShell.close()
   })
 })

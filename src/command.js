@@ -1,8 +1,5 @@
 /* eslint-disable no-param-reassign */
-import {glob} from './globals'
 import CommandIFace from './commandIFace'
-
-const logger = require('../config/winston')
 
 let markerCounter = 0
 
@@ -30,7 +27,7 @@ let markerCounter = 0
  */
 export default class Command {
   constructor(
-    shellQueuePool,
+    shellHarness,
     command,
     doneCBPayload,
     doneCallback,
@@ -38,11 +35,11 @@ export default class Command {
     shellQueue
   ) {
     this.commandIFace = new CommandIFace(this)
-    this.shellQueuePool = shellQueuePool
+    this.shellHarness = shellHarness
     this.command = command
     markerCounter += 1
     this.doneMarker = `${
-      shellQueuePool.config.doneMarker
+      shellHarness.config.doneMarker
     }${markerCounter.toString().padStart(7, '0')}@`
     this.output = ''
     this.error = undefined
@@ -56,10 +53,10 @@ export default class Command {
     this.state = 'created'
     this.autoDone = autoDone
     // eslint-disable-next-line no-async-promise-executor
-    this.promise = new Promise(async (success, fail) => {
-      this.success = success
-      this.fail = fail
-      if (!shellQueue) shellQueue = await shellQueuePool.getQueue()
+    this.promise = new Promise(async (resolve, reject) => {
+      this.resolve = resolve
+      this.reject = reject
+      if (!shellQueue) shellQueue = await this.shellHarness.getQueue()
       this.enqueuedAt = new Date()
       this.state = 'enqueued'
       shellQueue.enqueue(this)
@@ -72,8 +69,8 @@ export default class Command {
     const cmd = this.autoDone
       ? `{ ${this.command} } 2>&1;\nprintf $?${this.doneMarker};\n`
       : this.command
-    if (glob.log)
-      logger.debug({
+    if (this.shellHarness.winston)
+      this.shellHarness.winston.debug({
         message: cmd,
         label: 'CMD'
       })
@@ -88,17 +85,16 @@ export default class Command {
   }
 
   finish(inError) {
-    if (glob.log) {
-      logger.log({
+    if (this.shellHarness.winston)
+      this.shellHarness.winston.log({
         level: inError ? 'error' : 'debug',
         message: this.output,
         label: 'CMDOUTPUT'
       })
-    }
     this.error = inError
     this.finishedAt = new Date()
     this.state = 'finished'
-    this.success(
+    this.resolve(
       this.doneCallback
         ? this.doneCallback(this, this.doneCBPayload)
         : {
@@ -109,10 +105,16 @@ export default class Command {
     )
   }
 
+  fail(error) {
+    this.state = 'failed'
+    this.commandIFace.emit('failed', this.commandIFace)
+    this.reject(error)
+  }
+
   cancel() {
     this.state = 'cancelled'
     this.commandIFace.emit('cancelled', this.commandIFace)
-    this.fail(new Error('cancelled'))
+    this.reject(new Error('cancelled'))
   }
 
   receiveData(dataString) {
@@ -123,10 +125,20 @@ export default class Command {
   }
 
   handleMessage(message) {
+    if (this.shellHarness.winston)
+      this.shellHarness.winston.debug({
+        message,
+        label: 'CMDHMSG'
+      })
     this.commandIFace.emit('message', message)
   }
 
   sendMessage(message) {
+    if (this.shellHarness.winston)
+      this.shellHarness.winston.debug({
+        message,
+        label: 'CMDSMSG'
+      })
     this.shellQueue.process.send(message)
   }
 }

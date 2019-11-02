@@ -5,16 +5,16 @@ import winston from './winston'
 
 // const fsPromises = require('fs').promises
 
-const initShellQueue = async shellQueuePool => {
-  const shellQueue = new ShellQueue(shellQueuePool)
+const initShellQueue = async shellHarness => {
+  const shellQueue = new ShellQueue(shellHarness)
 
-  if (shellQueuePool.config.user) {
-    if (!shellQueuePool.config.rootPassword)
+  if (shellHarness.config.user) {
+    if (!shellHarness.config.rootPassword)
       throw new Error(LOCAL.rootPasswordRequiredToChangeUser)
 
     const sudo = new Command(
-      shellQueuePool,
-      `{ sudo -p PaxsWord -S su ${shellQueuePool.config.user}; } 2>&1 ;\n`,
+      shellHarness,
+      `{ sudo -p PaxsWord -S su ${shellHarness.config.user}; } 2>&1 ;\n`,
       // `sudo --user=#${shellQueuePool.config.uid} --group=#${shellQueuePool.config.gid} -p PaxsWord -S su ${shellQueuePool.config.user};\n`,
       undefined,
       undefined,
@@ -26,19 +26,19 @@ const initShellQueue = async shellQueuePool => {
       if (stdout !== 'PaxsWord') {
         shellQueue.shutdown()
         if (stdout.includes('No passwd entry for user'))
-          throw new Error(`${LOCAL.noSuchUser}: ${shellQueuePool.config.user}`)
+          throw new Error(`${LOCAL.noSuchUser}: ${shellHarness.config.user}`)
         if (stdout.includes('Sorry, try again.'))
           throw new Error(`${LOCAL.wrongPassword}`)
         throw new Error(`login failed: ${stdout}`)
       }
-      sudo.stdin.write(`${shellQueuePool.config.rootPassword}\n`)
+      sudo.stdin.write(`${shellHarness.config.rootPassword}\n`)
       sudo.sendDoneMarker()
     })
 
     await sudo
 
     const whoami = await new Command(
-      shellQueuePool,
+      shellHarness,
       'whoami;',
       undefined,
       undefined,
@@ -46,20 +46,20 @@ const initShellQueue = async shellQueuePool => {
       shellQueue
     )
 
-    if (whoami.output !== `${shellQueuePool.config.user}\n`) {
+    if (whoami.output !== `${shellHarness.config.user}\n`) {
       shellQueue.shutdown()
-      throw new Error(`not logged in as ${shellQueuePool.config.user}`)
+      throw new Error(`not logged in as ${shellHarness.config.user}`)
     }
   }
 
-  if (shellQueuePool.config.initScript) {
-    if (shellQueuePool.config.initScript instanceof Promise)
+  if (shellHarness.config.initScript) {
+    if (shellHarness.config.initScript instanceof Promise)
       // eslint-disable-next-line no-param-reassign
-      shellQueuePool.config.initScript = await shellQueuePool.config.initScript
+      shellHarness.config.initScript = await shellHarness.config.initScript
 
     await new Command(
-      shellQueuePool,
-      shellQueuePool.config.initScript,
+      shellHarness,
+      shellHarness.config.initScript,
       undefined,
       undefined,
       true,

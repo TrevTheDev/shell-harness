@@ -14,7 +14,7 @@ const initShellQueue = async shellHarness => {
 
     const sudo = new Command(
       shellHarness,
-      `{ sudo -p PaxsWord -S su ${shellHarness.config.user}; } 2>&1 ;\n`,
+      `sudo -p PaxsWord -S su ${shellHarness.config.user} 2>&1 ;\n`,
       // `sudo --user=#${shellQueuePool.config.uid} --group=#${shellQueuePool.config.gid} -p PaxsWord -S su ${shellQueuePool.config.user};\n`,
       undefined,
       undefined,
@@ -34,7 +34,6 @@ const initShellQueue = async shellHarness => {
       sudo.stdin.write(`${shellHarness.config.rootPassword}\n`)
       sudo.sendDoneMarker()
     })
-
     await sudo
 
     const whoami = await new Command(

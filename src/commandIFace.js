@@ -48,8 +48,8 @@ export default class CommandIFace extends EventEmitter {
    * @readonly
    * @memberof CommandIFace
    */
-  get shellQueuePool() {
-    return this._command.shellQueuePool
+  get shellHarness() {
+    return this._command.shellHarness
   }
 
   /**

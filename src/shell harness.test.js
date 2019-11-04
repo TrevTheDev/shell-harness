@@ -1,6 +1,8 @@
 /* eslint-disable no-unused-expressions */
 import ShellHarness from './shell harness'
 
+const {spawn} = require('child_process')
+
 const chai = require('chai')
 const chaiAsPromised = require('chai-as-promised')
 
@@ -63,12 +65,37 @@ describe('shell queue', () => {
     expect(cmd.output).to.equal(`HELLO`)
   })
 
+  it('bug test', async () => {
+    const pms = new Promise(resolve => {
+      const sh = spawn('/bin/sh', undefined, {
+        stdio: ['pipe', 'pipe', 'pipe']
+      })
+      sh.stdout.on('data', data => {
+        const dataStr = data.toString()
+        console.log(dataStr)
+        if (dataStr === 'password') {
+          sh.stdin.write(`${process.env.RPASSWORD}\n`)
+          sh.stdin.write('whoami;\n')
+        } else {
+          resolve(dataStr)
+        }
+      })
+      sh.on('close', code => console.log(`process exited with code ${code}`))
+      console.log('SEND SUDO')
+      sh.stdin.write('sudo -p password -S su root 2>&1 ;\n')
+    })
+    const res = await expect(pms).to.be.fulfilled
+    console.log(`AWAIT pms DONE: ${res}`)
+    // process.exit()
+  })
+
   it('provides a root shell', async () => {
     const rootShell = new ShellHarness({
       user: 'root',
       rootPassword: process.env.RPASSWORD
     })
     const cmd = await rootShell.createCommand('whoami;')
+    console.log(`USER ${cmd.output}`)
     expect(`${cmd.output}`).to.equal('root\n')
     expect(rootShell.config.rootPassword).to.not.exist
     rootShell.close()

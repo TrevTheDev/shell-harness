@@ -150,7 +150,7 @@ Node formats messages sent via IPC
   log: true                // produce a log
   winstonLog: {            // see winston for config options
     level: 'debug',
-    filename: `./logs/app.log`,
+    filename: './logs/app.log',
     handleExceptions: true,
     maxsize: 5242880, // 5MB
     maxFiles: 1,

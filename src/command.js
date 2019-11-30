@@ -56,7 +56,11 @@ export default class Command {
     this.promise = new Promise(async (resolve, reject) => {
       this.resolve = resolve
       this.reject = reject
-      if (!shellQueue) shellQueue = await this.shellHarness.getQueue()
+      try {
+        if (!shellQueue) shellQueue = await this.shellHarness.getQueue()
+      } catch (e) {
+        return this.fail(e)
+      }
       this.enqueuedAt = new Date()
       this.state = 'enqueued'
       shellQueue.enqueue(this)
@@ -69,11 +73,7 @@ export default class Command {
     const cmd = this.autoDone
       ? `{ ${this.command} } 2>&1;\nprintf $?${this.doneMarker};\n`
       : this.command
-    if (this.shellHarness.winston)
-      this.shellHarness.winston.debug({
-        message: cmd,
-        label: 'CMD'
-      })
+    if (this.shellHarness.winston) this.shellHarness.winston.debug(cmd, 'CMD')
     this.state = 'executing'
     this.startedAt = new Date()
     this.shellQueue.stdin.write(cmd)
@@ -86,11 +86,11 @@ export default class Command {
 
   finish(inError) {
     if (this.shellHarness.winston)
-      this.shellHarness.winston.log({
-        level: inError ? 'error' : 'debug',
-        message: this.output,
-        label: 'CMDOUTPUT'
-      })
+      this.shellHarness.winston.log(
+        inError ? 'error' : 'debug',
+        this.output,
+        'CMDOUTPUT'
+      )
     this.error = inError
     this.finishedAt = new Date()
     this.state = 'finished'
@@ -126,19 +126,13 @@ export default class Command {
 
   handleMessage(message) {
     if (this.shellHarness.winston)
-      this.shellHarness.winston.debug({
-        message,
-        label: 'CMDHMSG'
-      })
+      this.shellHarness.winston.debug(message, 'CMDHMSG')
     this.commandIFace.emit('message', message)
   }
 
   sendMessage(message) {
     if (this.shellHarness.winston)
-      this.shellHarness.winston.debug({
-        message,
-        label: 'CMDSMSG'
-      })
+      this.shellHarness.winston.debug(message, 'CMDSMSG')
     this.shellQueue.process.send(message)
   }
 }

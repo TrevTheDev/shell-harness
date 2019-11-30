@@ -1,9 +1,93 @@
 import {DEFAULT_CONFIG, LOCAL} from './globals'
 import Command from './command'
 import ShellQueue from './shell queue'
-import winston from './winston'
+// import winston from './winston'
 
-// const fsPromises = require('fs').promises
+let sudoWait = 50
+
+const confirmUser = async (shellQueue, user) => {
+  const whoami = await new Command(
+    shellQueue.shellHarness,
+    'whoami;',
+    undefined,
+    undefined,
+    true,
+    shellQueue
+  )
+  if (whoami.output !== `${user}\n`) {
+    shellQueue.shutdown()
+    throw new Error(`not logged in as ${user}`)
+  }
+}
+
+const sudoInteractionHandler = (
+  shellQueue,
+  sudoCmd,
+  stdout,
+  user,
+  password
+) => {
+  if (stdout !== 'PaxsWord') {
+    let msg
+    if (stdout.includes('No passwd entry for user'))
+      msg = `${LOCAL.noSuchUser}: ${user}`
+    if (stdout.includes('Sorry, try again.')) msg = `${LOCAL.wrongPassword}`
+    else msg = `login failed: ${stdout}`
+    // sudo._command.fail()
+    // reject(new Error(msg))
+    shellQueue.handleCommandFinished(true, new Error(msg))
+  } else {
+    setTimeout(() => {
+      sudoCmd.stdin.write(`${password}\n`)
+      sudoCmd.sendDoneMarker()
+    }, sudoWait)
+  }
+}
+
+const sudo = (shellQueue, user, password) => {
+  return new Promise((resolve, reject) => {
+    const sudoCmd = new Command(
+      shellQueue.shellHarness,
+      `sudo -K && sudo -p PaxsWord -S su ${user} 2>&1 ;\n`,
+      undefined,
+      undefined,
+      false,
+      shellQueue
+    )
+    sudoCmd.on('data', stdout =>
+      sudoInteractionHandler(shellQueue, sudoCmd, stdout, user, password)
+    )
+    sudoCmd
+      .then(() => {
+        resolve(confirmUser(shellQueue, user))
+      })
+      .catch(error => {
+        shellQueue.shutdown()
+        reject(error)
+      })
+  })
+}
+
+const initScript = async shellQueue => {
+  const {shellHarness} = shellQueue
+  if (shellHarness.config.initScript) {
+    if (shellHarness.config.initScript instanceof Promise)
+      shellHarness.config.initScript = await shellHarness.config.initScript
+    try {
+      await new Command(
+        shellHarness,
+        shellHarness.config.initScript,
+        undefined,
+        undefined,
+        true,
+        shellQueue
+      )
+    } catch (error) {
+      shellQueue.shutdown()
+      throw error
+    }
+  }
+}
 
 const initShellQueue = async shellHarness => {
   const shellQueue = new ShellQueue(shellHarness)
@@ -11,60 +95,14 @@ const initShellQueue = async shellHarness => {
   if (shellHarness.config.user) {
     if (!shellHarness.config.rootPassword)
       throw new Error(LOCAL.rootPasswordRequiredToChangeUser)
-
-    const sudo = new Command(
-      shellHarness,
-      `sudo -p PaxsWord -S su ${shellHarness.config.user} 2>&1 ;\n`,
-      // `sudo --user=#${shellQueuePool.config.uid} --group=#${shellQueuePool.config.gid} -p PaxsWord -S su ${shellQueuePool.config.user};\n`,
-      undefined,
-      undefined,
-      false,
-      shellQueue
-    )
-
-    sudo.on('data', stdout => {
-      if (stdout !== 'PaxsWord') {
-        shellQueue.shutdown()
-        if (stdout.includes('No passwd entry for user'))
-          throw new Error(`${LOCAL.noSuchUser}: ${shellHarness.config.user}`)
-        if (stdout.includes('Sorry, try again.'))
-          throw new Error(`${LOCAL.wrongPassword}`)
-        throw new Error(`login failed: ${stdout}`)
-      }
-      sudo.stdin.write(`${shellHarness.config.rootPassword}\n`)
-      sudo.sendDoneMarker()
-    })
-    await sudo
-
-    const whoami = await new Command(
-      shellHarness,
-      'whoami;',
-      undefined,
-      undefined,
-      true,
-      shellQueue
-    )
-
-    if (whoami.output !== `${shellHarness.config.user}\n`) {
-      shellQueue.shutdown()
-      throw new Error(`not logged in as ${shellHarness.config.user}`)
-    }
-  }
-
-  if (shellHarness.config.initScript) {
-    if (shellHarness.config.initScript instanceof Promise)
-      // eslint-disable-next-line no-param-reassign
-      shellHarness.config.initScript = await shellHarness.config.initScript
-
-    await new Command(
-      shellHarness,
-      shellHarness.config.initScript,
-      undefined,
-      undefined,
-      true,
-      shellQueue
+    await sudo(
+      shellQueue,
+      shellHarness.config.user,
+      shellHarness.config.rootPassword
     )
   }
+
+  await initScript(shellQueue)
 
   return shellQueue
 }
@@ -82,11 +120,11 @@ export default class ShellHarness {
       ...DEFAULT_CONFIG,
       ...config
     }
-    if (this.config.log)
-      this.winston = winston(
-        this.config.winstonLog,
-        this.config.winstonExceptionLog
-      )
+    if (this.config.logger) {
+      this.winston = this.config.logger
+    }
+
+    if (this.config.sudoWait) sudoWait = this.config.sudoWait
   }
 
   get config() {
@@ -95,11 +133,17 @@ export default class ShellHarness {
 
   async shells() {
     if (this._shells) return this._shells
-    this._shells = await Promise.all(
-      Array(this.config.numberOfProcesses)
-        .fill()
-        .map(() => initShellQueue(this))
-    )
+    this._shells = []
+    try {
+      const cnt = this.config.numberOfProcesses
+      for (let step = 0; step < cnt; step += 1) {
+        // eslint-disable-next-line no-await-in-loop
+        this._shells.push(await initShellQueue(this)) // slow sequential process is required by sudo command
+      }
+    } catch (error) {
+      this.close()
+      throw error
+    }
     delete this.config.rootPassword
     return this._shells
   }
@@ -173,7 +217,7 @@ export default class ShellHarness {
    * @memberof ShellHarness
    */
   close() {
-    if (this._shells) {
+    if (this._shells && this._shells.constructor.name !== 'Error') {
       this._shells.forEach(queue => queue.shutdown())
       this._shells = undefined
     }

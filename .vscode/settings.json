@@ -4,7 +4,7 @@
       "esm"
     ],
     "mocha.options": {
-      "timeout": 3000
+      "timeout": 300000
     },
     "mocha.files.glob": "src/**/*.test.js",
     "mocha.parallelTests": 1,

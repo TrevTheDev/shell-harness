@@ -1,4 +1,4 @@
-const {spawn} = require('child_process')
+import {spawn} from 'child_process'
 
 /**
  * A fifo queue of all discrete shell commands/scripts.
@@ -14,10 +14,10 @@ export default class ShellQueue extends Array {
     this.state = 'init'
     this.commandsRunning = 0
     if (this.shellHarness.winston)
-      this.shellHarness.winston.info({
-        message: `Spawning process: ${shellHarness.config.shell}`,
-        label: 'ShellQueue'
-      })
+      this.shellHarness.winston.info(
+        `Spawning process: ${shellHarness.config.shell}`,
+        'ShellQueue'
+      )
     try {
       this._process = spawn(
         shellHarness.config.shell,
@@ -26,26 +26,26 @@ export default class ShellQueue extends Array {
       )
     } catch (exception) {
       if (this.shellHarness.winston)
-        this.shellHarness.winston.error({
-          message: `initialize, exception thrown: ${exception} ${exception.stack}`,
-          label: 'ShellQueue'
-        })
+        this.shellHarness.winston.error(
+          `initialize, exception thrown: ${exception} ${exception.stack}`,
+          'ShellQueue'
+        )
       throw exception
     }
     this._pid = this._process.pid
     if (this.shellHarness.winston)
-      this.shellHarness.winston.info({
-        message: `Process: ${shellHarness.config.shell} PID: ${this._pid}`,
-        label: 'ShellQueue'
-      })
+      this.shellHarness.winston.info(
+        `Process: ${shellHarness.config.shell} PID: ${this._pid}`,
+        'ShellQueue'
+      )
 
     this._process.stderr.on('data', data => {
       const [cmd] = this
       const dataString = data.toString()
-      this.shellHarness.winston.error({
-        message: `cmd: ${cmd.command} returned stderr: ${dataString}`,
-        label: 'ShellQueue'
-      })
+      this.shellHarness.winston.error(
+        `cmd: ${cmd.command} returned stderr: ${dataString}`,
+        'ShellQueue'
+      )
       this.handleCommandFinished(
         true,
         new Error(
@@ -57,27 +57,27 @@ export default class ShellQueue extends Array {
     this._process.on('message', message => this.onMessage(message))
     this._process.on('close', (code, signal) => {
       if (this.shellHarness.winston)
-        this.shellHarness.winston.info({
-          message: `child process received close.  code:${code} signal:${signal}`,
-          label: 'ShellQueue: close'
-        })
+        this.shellHarness.winston.info(
+          `child process received close. code:${code} signal:${signal}`,
+          'ShellQueue'
+        )
       this.state = 'closed'
     })
-    this._process.on('error', err => {
+    this._process.on('error', error => {
       if (this.shellHarness.winston)
-        this.shellHarness.winston.error({
-          message: `child process received error ${err}`,
-          label: 'ShellQueue: error'
-        })
+        this.shellHarness.winston.error(
+          `child process received error ${error}`,
+          'ShellQueue'
+        )
       this.state = 'error'
-      throw new Error(err)
+      throw new Error(error)
     })
     this._process.on('exit', (code, signal) => {
       if (this.shellHarness.winston)
-        this.shellHarness.winston.info({
-          message: `child process received exit; code:${code} signal:${signal}`,
-          label: 'ShellQueue: exit'
-        })
+        this.shellHarness.winston.info(
+          `child process exit - code:${code} signal:${signal}`,
+          'ShellQueue'
+        )
       this.state = 'exited'
     })
     this.state = 'online'
@@ -102,8 +102,9 @@ export default class ShellQueue extends Array {
   }
 
   shutdown() {
+    this.process.stdout.removeAllListeners()
     this.state = 'shutdown'
-    this.process.kill('SIGHUP')
+    this.process.kill()
     this.forEach(command => command.cancel())
     while (this.length > 0) {
       this.pop()

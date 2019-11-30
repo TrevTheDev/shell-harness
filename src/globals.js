@@ -6,7 +6,7 @@ export const LOCAL = {
 
 export const DEFAULT_CONFIG = {
   shell: '/bin/sh',
-  spawnOptions: {stdio: ['pipe', 'pipe', 'pipe', 'ipc']},
+  spawnOptions: {stdio: ['pipe', 'pipe', 'pipe', 'ipc', 'pipe']},
 
   initScript: undefined,
 

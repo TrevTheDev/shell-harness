@@ -1,10 +1,10 @@
 /* eslint-disable no-unused-expressions */
+
+import {spawn} from 'child_process'
+
+import chai from 'chai'
+import chaiAsPromised from 'chai-as-promised'
 import ShellHarness from './shell harness'
-
-const {spawn} = require('child_process')
-
-const chai = require('chai')
-const chaiAsPromised = require('chai-as-promised')
 
 chai.use(chaiAsPromised)
 
@@ -56,6 +56,39 @@ describe('shell queue', () => {
     })
     const outcome = await cmdLine
     expect(outcome.output).to.equal(`what is your name?\nBob\n`)
+  })
+
+  it('sending data via fd', async () => {
+    await shell.createCommand('rm dummy;')
+    await shell.createCommand('rm dummy2;')
+    const cmdLine = shell.interact('\n')
+    cmdLine.on('executing', cmd => {
+      // cmdLine.stdin.write('exec 4<>dummy;')
+      // const stdin4 = cmdLine._command.shellQueue.process.stdio[4]
+      cmdLine.stdin.write('ls -la /proc/$$/fd;\n')
+      cmdLine.stdin.write('sudo -K;\n')
+      cmdLine.stdin.write(`echo "${process.env.RPASSWORD}";\n`)
+      cmdLine.stdin.write(`sudo -p PaxsWord -S su root 2>&1;\n`)
+      setTimeout(() => {
+        cmdLine.stdin.write(`${process.env.RPASSWORD}\n`)
+        cmdLine.stdin.write(`echo "------------------------";\n`)
+        cmdLine.stdin.write('ls -la /proc/$$/fd;\n')
+        cmdLine.sendDoneMarker()
+        // Something you want delayed.
+      }, 10)
+
+      // stdin4.end()
+      // cmdLine.stdin.write('cat <&4 >dummy2;\n')
+      // stdin4.write('NEXT')
+      // cmdLine._command.shellQueue.process.stdio[4].end()
+      // cmdLine.stdin.write('echo TEST >&10;\n')
+      // cmdLine.stdin.write('exec 4<&-;\n')
+    })
+    cmdLine.on('data', stdout => {
+      console.log(stdout) // Bob\n
+    })
+    const outcome = await cmdLine
+    console.log(outcome.output)
   })
 
   it('fails if stdout', async () => {

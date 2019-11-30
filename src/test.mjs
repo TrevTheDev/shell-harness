@@ -1,4 +1,4 @@
-const {spawn} = require('child_process')
+import {spawn} from 'child_process'
 
 const rootF = new Promise(resolve => {
   const sh = spawn('/bin/sh', undefined, {
@@ -9,6 +9,8 @@ const rootF = new Promise(resolve => {
     console.log(dataStr)
     if (dataStr === 'password') {
       sh.stdin.write(`${process.env.RPASSWORD}\n`)
+      sh.stdin.write('whoami;\n')
+      sh.stdin.write('exit;\n')
       sh.stdin.write('whoami;\n')
     } else {
       resolve(dataStr)

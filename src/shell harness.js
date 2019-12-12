@@ -31,7 +31,8 @@ const sudoInteractionHandler = (
     let msg
     if (stdout.includes('No passwd entry for user'))
       msg = `${LOCAL.noSuchUser}: ${user}`
-    if (stdout.includes('Sorry, try again.')) msg = `${LOCAL.wrongPassword}`
+    else if (stdout.includes('Sorry, try again.'))
+      msg = `${LOCAL.wrongPassword}`
     else msg = `login failed: ${stdout}`
     // sudo._command.fail()
     // reject(new Error(msg))

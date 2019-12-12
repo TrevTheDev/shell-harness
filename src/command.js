@@ -53,17 +53,19 @@ export default class Command {
     this.state = 'created'
     this.autoDone = autoDone
     // eslint-disable-next-line no-async-promise-executor
-    this.promise = new Promise(async (resolve, reject) => {
+    this.promise = new Promise((resolve, reject) => {
       this.resolve = resolve
       this.reject = reject
-      try {
-        if (!shellQueue) shellQueue = await this.shellHarness.getQueue()
-      } catch (e) {
-        return this.fail(e)
-      }
-      this.enqueuedAt = new Date()
-      this.state = 'enqueued'
-      shellQueue.enqueue(this)
+      ;(async () => {
+        try {
+          if (!shellQueue) shellQueue = await this.shellHarness.getQueue()
+          this.enqueuedAt = new Date()
+          this.state = 'enqueued'
+          shellQueue.enqueue(this)
+        } catch (e) {
+          this.fail(e)
+        }
+      })()
     })
     return this.commandIFace
   }

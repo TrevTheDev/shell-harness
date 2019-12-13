@@ -1,6 +1,6 @@
 {
   "name": "@trevthedev/shell-harness",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "queues and runs shell scripts",
   "keywords": [
     "shell",
@@ -20,7 +20,7 @@
     "type": "git",
     "url": "git+https://github.com/TrevTheDev/shell-harness.git"
   },
-  "main": "./src/shell harness.js",
+  "exports": "./src/shell harness.js",
   "scripts": {
     "test": "mocha -r esm \"src/**/*.test.js\" --timeout 50000"
   },

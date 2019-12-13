@@ -1,7 +1,6 @@
 import {DEFAULT_CONFIG, LOCAL} from './globals'
 import Command from './command'
 import ShellQueue from './shell queue'
-// import winston from './winston'
 
 let sudoWait = 50
 
@@ -122,7 +121,7 @@ export default class ShellHarness {
       ...config
     }
     if (this.config.logger) {
-      this.winston = this.config.logger
+      this.logger = this.config.logger
     }
 
     if (this.config.sudoWait) sudoWait = this.config.sudoWait

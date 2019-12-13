@@ -33,8 +33,8 @@ export default class ShellQueue extends Array {
       throw exception
     }
     this._pid = this._process.pid
-    if (this.shellHarness.winston)
-      this.shellHarness.winston.info(
+    if (this.shellHarness.logger)
+      this.shellHarness.logger.info(
         `Process: ${shellHarness.config.shell} PID: ${this._pid}`,
         'ShellQueue'
       )
@@ -42,10 +42,11 @@ export default class ShellQueue extends Array {
     this._process.stderr.on('data', data => {
       const [cmd] = this
       const dataString = data.toString()
-      this.shellHarness.winston.error(
-        `cmd: ${cmd.command} returned stderr: ${dataString}`,
-        'ShellQueue'
-      )
+      if (this.shellHarness.logger)
+        this.shellHarness.logger.error(
+          `cmd: ${cmd.command} returned stderr: ${dataString}`,
+          'ShellQueue'
+        )
       this.handleCommandFinished(
         true,
         new Error(

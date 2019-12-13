@@ -75,7 +75,7 @@ export default class Command {
     const cmd = this.autoDone
       ? `{ ${this.command} } 2>&1;\nprintf $?${this.doneMarker};\n`
       : this.command
-    if (this.shellHarness.winston) this.shellHarness.winston.debug(cmd, 'CMD')
+    if (this.shellHarness.logger) this.shellHarness.logger.debug(cmd, 'CMD')
     this.state = 'executing'
     this.startedAt = new Date()
     this.shellQueue.stdin.write(cmd)
@@ -87,8 +87,8 @@ export default class Command {
   }
 
   finish(inError) {
-    if (this.shellHarness.winston)
-      this.shellHarness.winston.log(
+    if (this.shellHarness.logger)
+      this.shellHarness.logger.log(
         inError ? 'error' : 'debug',
         this.output,
         'CMDOUTPUT'
@@ -127,14 +127,14 @@ export default class Command {
   }
 
   handleMessage(message) {
-    if (this.shellHarness.winston)
-      this.shellHarness.winston.debug(message, 'CMDHMSG')
+    if (this.shellHarness.logger)
+      this.shellHarness.logger.debug(message, 'CMDHMSG')
     this.commandIFace.emit('message', message)
   }
 
   sendMessage(message) {
-    if (this.shellHarness.winston)
-      this.shellHarness.winston.debug(message, 'CMDSMSG')
+    if (this.shellHarness.logger)
+      this.shellHarness.logger.debug(message, 'CMDSMSG')
     this.shellQueue.process.send(message)
   }
 }

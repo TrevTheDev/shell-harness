@@ -1,15 +1,17 @@
 # Introduction
 
-Shell Harness provides an easy way to interact with shell commands and scripts.  Benefits:
+Shell Harness provides an easy way to interact with shell commands and scripts. Benefits:
 
- - an initial script can be run to set context for all subsequent commands
- - all commands are run in a long running Child Processes vs. a process for each command
- - Multiple shells can be spawned to run commands in parallel
- - Commands are queued in a FIFO manner
+- an initial script can be run to set context for all subsequent commands
+- all commands are run in a long running Child Processes vs. a Child Processes for each command
+- Multiple shells can be spawned to run commands in parallel
+- Commands are queued in a FIFO manner
 
 # Installation
 
+```bash
 npm install @trevthedev/shell-harness
+```
 
 # How To
 
@@ -55,11 +57,11 @@ const outcome = await cmdline
 console.log(outcome.output) // `what is your name?\nBob\n`
 ```
 
-##  Get a root or other user shell
+## Get a root or other user shell
 
 ```javascript
 const rootShell = new ShellHarness({
-  user: 'root',  // or other user
+  user: 'root', // or other user
   rootPassword: process.env.RPASSWORD
 })
 const cmd = await rootShell.createCommand('whoami;')
@@ -119,16 +121,13 @@ cmd.on('data', stdout => {
   if (stdout === '\n') {
     cmd.sendMessage('HELLOBOB')
     cmd.stdin.write('read -r line <&3 ; printf $line ; \n')
-  } 
-  else 
-    cmd.sendDoneMarker() // required to finished command
+  } else cmd.sendDoneMarker() // required to finished command
 })
 const res = await cmd
 console.log(res.output) // \n"HELLOBOB"`
 ```
 
 Node formats messages sent via IPC
-
 
 # Configuration
 
@@ -144,22 +143,10 @@ Node formats messages sent via IPC
 
   numberOfProcesses: 1,    // number of shells to spawn
   concurrentCmds: 100,     // max number of commands to send to the shell at a time per shell
-  
+
   doneMarker: '__done__',  // unique identifier to determine whether command is completed - a sequential number is also added
 
   log: true                // produce a log
-  winstonLog: {            // see winston for config options
-    level: 'debug',
-    filename: './logs/app.log',
-    handleExceptions: true,
-    maxsize: 5242880, // 5MB
-    maxFiles: 1,
-    colorize: false,
-    options: {flags: 'w'}
-  },
-  winstonExceptionLog: {   // see winston for config options
-    filename: './logs/exceptions.log'
-  }
 }
 ```
 
@@ -168,18 +155,27 @@ Node formats messages sent via IPC
 ```javascript
 const shell = new ShellHarness(optionalConfig)
 
-const cmd = shell.createCommand(command, optionalDoneCallBackPayload, optionalDoneCallback, sendToEveryShell)
+const cmd = shell.createCommand(
+  command,
+  optionalDoneCallBackPayload,
+  optionalDoneCallback,
+  sendToEveryShell
+)
 
-const cmd = shell.interact(command, optionalDoneCallBackPayload, optionalDoneCallback)
+const cmd = shell.interact(
+  command,
+  optionalDoneCallBackPayload,
+  optionalDoneCallback
+)
 
-cmd.on('data', data=>{})
-cmd.on('message', message=>{})
+cmd.on('data', data => {})
+cmd.on('message', message => {})
 
 // other events include: created, enqueued, executing, cancelled, failed and finished
 
 const result = await cmd
-// result = { 
+// result = {
 //  error: whether shell exited in error,
-//  command: the command sent, 
+//  command: the command sent,
 //  output: string result }
 ```

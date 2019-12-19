@@ -1,5 +1,5 @@
 /* eslint-disable no-param-reassign */
-import CommandIFace from './commandIFace'
+import CommandIFace from './commandIFace.js'
 
 let markerCounter = 0
 

@@ -1,6 +1,6 @@
-import {DEFAULT_CONFIG, LOCAL} from './globals'
-import Command from './command'
-import ShellQueue from './shell queue'
+import {DEFAULT_CONFIG, LOCAL} from './globals.js'
+import Command from './command.js'
+import ShellQueue from './shell queue.js'
 
 let sudoWait = 50
 
@@ -199,16 +199,20 @@ export default class ShellHarness {
   }
 
   async getQueue() {
-    const shells = await this.shells()
-    let min = shells[0].length + 1
-    let shellQueue = {}
-    shells.forEach(sQueue => {
-      if (sQueue.length < min) {
-        min = sQueue.length
-        shellQueue = sQueue
-      }
-    })
-    return shellQueue
+    try {
+      const shells = await this.shells()
+      let min = shells[0].length + 1
+      let shellQueue = {}
+      shells.forEach(sQueue => {
+        if (sQueue.length < min) {
+          min = sQueue.length
+          shellQueue = sQueue
+        }
+      })
+      return shellQueue
+    } catch (e) {
+      throw e
+    }
   }
 
   /**

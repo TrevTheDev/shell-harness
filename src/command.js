@@ -26,6 +26,17 @@ let markerCounter = 0
  * If an `Elevator` is provided then the command can elevate on fail.
  */
 export default class Command {
+  /**
+   * creates a new promise that will execute the provided command
+   *
+   * @param {ShellHarness} [shellHarness]
+   * @param {String} [command] - the command to run terminated by a semi-colon ;
+   * @param {Object} [doneCBPayload] - an object to pass to the doneCallback function
+   * @param {Function} [doneCallback] - callback function before command is completed
+   * @param {Boolean} [autoDone]
+   * @param {ShellQueue} [shellQueue]
+   * @returns {CommandIFace} a promise that will resolve once the command is completed
+   */
   constructor(
     shellHarness,
     command,

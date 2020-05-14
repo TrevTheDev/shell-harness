@@ -1,6 +1,6 @@
 {
   "name": "@trevthedev/shell-harness",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "description": "queues and runs shell scripts",
   "keywords": [
     "shell",

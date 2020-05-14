@@ -13,8 +13,8 @@ export default class ShellQueue extends Array {
     this._shellHarness = shellHarness
     this.state = 'init'
     this.commandsRunning = 0
-    if (this.shellHarness.winston)
-      this.shellHarness.winston.info(
+    if (this.shellHarness.logger)
+      this.shellHarness.logger.info(
         `Spawning process: ${shellHarness.config.shell}`,
         'ShellQueue'
       )
@@ -25,8 +25,8 @@ export default class ShellQueue extends Array {
         shellHarness.config.spawnOptions
       )
     } catch (exception) {
-      if (this.shellHarness.winston)
-        this.shellHarness.winston.error(
+      if (this.shellHarness.logger)
+        this.shellHarness.logger.error(
           `initialize, exception thrown: ${exception} ${exception.stack}`,
           'ShellQueue'
         )
@@ -57,16 +57,16 @@ export default class ShellQueue extends Array {
     this._process.stdout.on('data', data => this.onData(data))
     this._process.on('message', message => this.onMessage(message))
     this._process.on('close', (code, signal) => {
-      if (this.shellHarness.winston)
-        this.shellHarness.winston.info(
+      if (this.shellHarness.logger)
+        this.shellHarness.logger.info(
           `child process received close. code:${code} signal:${signal}`,
           'ShellQueue'
         )
       this.state = 'closed'
     })
     this._process.on('error', error => {
-      if (this.shellHarness.winston)
-        this.shellHarness.winston.error(
+      if (this.shellHarness.logger)
+        this.shellHarness.logger.error(
           `child process received error ${error}`,
           'ShellQueue'
         )
@@ -74,8 +74,8 @@ export default class ShellQueue extends Array {
       throw new Error(error)
     })
     this._process.on('exit', (code, signal) => {
-      if (this.shellHarness.winston)
-        this.shellHarness.winston.info(
+      if (this.shellHarness.logger)
+        this.shellHarness.logger.info(
           `child process exit - code:${code} signal:${signal}`,
           'ShellQueue'
         )

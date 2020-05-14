@@ -151,12 +151,11 @@ export default class ShellHarness {
   /**
    * creates a new promise that will execute the provided command
    *
-   * @param {string} command - the command to run terminated by a semi-colon ;
-   * @param {object} [doneCBPayload] - an object to pass to the doneCallback function
-   * @param {function} [doneCallback=this.config.doneCallback] - callback function before command is completed
-   * @param {function} [sendToEveryShell=false] - send this command to every shell
+   * @param {String} [command] - the command to run terminated by a semi-colon ;
+   * @param {Object} [doneCBPayload] - an object to pass to the doneCallback function
+   * @param {Function} [doneCallback=this.config.doneCallback] - callback function before command is completed
+   * @param {Boolean} [sendToEveryShell=false] - send this command to every shell
    * @returns {CommandIFace} a promise that will resolve once the command is completed
-   * @memberof ShellHarness
    */
   createCommand(
     command,

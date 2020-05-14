@@ -62,7 +62,7 @@ describe('shell queue', () => {
     await shell.createCommand('rm dummy;')
     await shell.createCommand('rm dummy2;')
     const cmdLine = shell.interact('\n')
-    cmdLine.on('executing', cmd => {
+    cmdLine.on('executing', () => {
       // cmdLine.stdin.write('exec 4<>dummy;')
       // const stdin4 = cmdLine._command.shellQueue.process.stdio[4]
       cmdLine.stdin.write('ls -la /proc/$$/fd;\n')
@@ -166,9 +166,7 @@ describe('shell queue', () => {
   it('can intercept return', async () => {
     const cb1 = async (cmdx, cbData) => {
       expect(cbData).to.equal('HIT')
-      const x = new Promise(resolve => setTimeout(() => resolve(true, 20)))
-      const y = await x
-      return y
+      return await new Promise(resolve => setTimeout(() => resolve(true, 20)))
     }
     const cmd = await shell.createCommand('printf HELLO ;', 'HIT', cb1)
     expect(cmd).to.be.true

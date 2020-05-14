@@ -6,6 +6,7 @@ export const LOCAL = {
 
 export const DEFAULT_CONFIG = {
   shell: '/bin/sh',
+  spawnArgs: '',
   spawnOptions: {stdio: ['pipe', 'pipe', 'pipe', 'ipc', 'pipe']},
 
   initScript: undefined,
@@ -19,6 +20,8 @@ export const DEFAULT_CONFIG = {
   concurrentCmds: 100,
 
   doneMarker: '__done__',
+
+  sudoWait: 100,
 
   log: true
 }

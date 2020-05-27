@@ -133,19 +133,27 @@ export default class ShellHarness {
 
   async shells() {
     if (this._shells) return this._shells
-    this._shells = []
-    try {
-      const cnt = this.config.numberOfProcesses
-      for (let step = 0; step < cnt; step += 1) {
-        // eslint-disable-next-line no-await-in-loop
-        this._shells.push(await initShellQueue(this)) // slow sequential process is required by sudo command
-      }
-    } catch (error) {
-      this.close()
-      throw error
+    if (this.spawningShellsPromise) this.spawningShellsPromise
+    const shells = []
+    const cnt = this.config.numberOfProcesses
+    for (let step = 0; step < cnt; step += 1) {
+      shells.push(initShellQueue(this)) // slow sequential process is required by sudo command
     }
-    delete this.config.rootPassword
-    return this._shells
+    this.spawningShellsPromise = new Promise(resolve=>{
+      try {
+        Promise.all(shells).then(shellArray => {
+          this._shells = shellArray
+          delete this.spawningShellsPromise
+          resolve(shellArray)
+        })
+      } catch (error) {
+        this.close()
+        throw error
+      } finally {
+        delete this.config.rootPassword
+      }
+    })
+    return this.spawningShellsPromise
   }
 
   /**

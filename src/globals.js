@@ -1,13 +1,13 @@
 export const LOCAL = {
   wrongPassword: 'wrong password provided',
   noSuchUser: 'user not found',
-  rootPasswordRequiredToChangeUser: 'root password required to change user'
+  rootPasswordRequiredToChangeUser: 'root password required to change user',
 }
 
 export const DEFAULT_CONFIG = {
   shell: '/bin/sh',
   spawnArgs: [],
-  spawnOptions: {stdio: ['pipe', 'pipe', 'pipe', 'ipc', 'pipe']},
+  spawnOptions: { stdio: ['pipe', 'pipe', 'pipe', 'ipc', 'pipe'] },
 
   initScript: undefined,
 
@@ -23,5 +23,5 @@ export const DEFAULT_CONFIG = {
 
   sudoWait: 100,
 
-  log: true
+  log: true,
 }

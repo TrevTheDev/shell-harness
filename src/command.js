@@ -8,8 +8,8 @@ let markerCounter = 0
  *
  * @class Command
  *
- * any discrete command/script to execute on the shell.  Commands are promises that fulfil once done.  Or reject if cancelled.
- * Commands also emit events as they progress:
+ * any discrete command/script to execute on the shell.  Commands are promises that fulfil once
+ *  done. Or reject if cancelled.  Commands also emit events as they progress:
  *
  * created - after first being created
  *
@@ -43,7 +43,7 @@ export default class Command {
     doneCBPayload,
     doneCallback,
     autoDone,
-    shellQueue
+    shellQueue,
   ) {
     this.commandIFace = new CommandIFace(this)
     this.shellHarness = shellHarness
@@ -66,8 +66,8 @@ export default class Command {
     // eslint-disable-next-line no-async-promise-executor
     this.promise = new Promise((resolve, reject) => {
       this.resolve = resolve
-      this.reject = reject
-      ;(async () => {
+      this.reject = reject;
+      (async () => {
         try {
           if (!shellQueue) shellQueue = await this.shellHarness.getQueue()
           this.enqueuedAt = new Date()
@@ -98,12 +98,13 @@ export default class Command {
   }
 
   finish(inError) {
-    if (this.shellHarness.logger)
+    if (this.shellHarness.logger) {
       this.shellHarness.logger.log(
         inError ? 'error' : 'debug',
         this.output,
-        'CMDOUTPUT'
+        'CMDOUTPUT',
       )
+    }
     this.error = inError
     this.finishedAt = new Date()
     this.state = 'finished'
@@ -111,10 +112,10 @@ export default class Command {
       this.doneCallback
         ? this.doneCallback(this, this.doneCBPayload)
         : {
-            error: this.error,
-            command: this.command,
-            output: this.output
-          }
+          error: this.error,
+          command: this.command,
+          output: this.output,
+        },
     )
   }
 
@@ -143,9 +144,27 @@ export default class Command {
     this.commandIFace.emit('message', message)
   }
 
+  /**
+   * sends an IPC message
+   *
+   * @param {String} message
+   * @returns
+   * @memberof Command
+   */
   sendMessage(message) {
     if (this.shellHarness.logger)
       this.shellHarness.logger.debug(message, 'CMDSMSG')
     this.shellQueue.process.send(message)
   }
+
+  // /**
+  //  * sends an IPC message
+  //  *
+  //  * @param {Stream} stream
+  //  * @returns
+  //  * @memberof Command
+  //  */
+  // pipe(stream) {
+  //   this.shellQueue.process.stdio[4].pipe(stream) // readable => writable
+  // }
 }

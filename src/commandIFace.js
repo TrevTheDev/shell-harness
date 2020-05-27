@@ -1,5 +1,5 @@
 /* eslint-disable no-param-reassign */
-import {EventEmitter} from 'events'
+import { EventEmitter } from 'events'
 
 export default class CommandIFace extends EventEmitter {
   constructor(command) {
@@ -34,13 +34,24 @@ export default class CommandIFace extends EventEmitter {
   /**
    * sends an IPC message
    *
-   * @param {*} message
+   * @param {String} message
    * @returns
    * @memberof CommandIFace
    */
   sendMessage(message) {
     return this._command.sendMessage(message)
   }
+
+  // /**
+  //  * pipes streams
+  //  *
+  //  * @param {Stream} stream
+  //  * @returns
+  //  * @memberof CommandIFace
+  //  */
+  // pipe(stream) {
+  //   return this._command.pipe(stream)
+  // }
 
   /**
    * the shellQueuePool this command belongs to

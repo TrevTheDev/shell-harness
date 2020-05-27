@@ -1,7 +1,8 @@
-/coverage
-/dist
-/logs
-/trash
+/.nyc_output/
+/coverage/
+/logs/
+/node_modules/
+/trash/
 /npm-debug.log
-/node_modules
-**/node_modules/**
+/package-lock.json
+

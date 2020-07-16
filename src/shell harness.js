@@ -1,4 +1,4 @@
-import {DEFAULT_CONFIG, LOCAL} from './globals.js'
+import { DEFAULT_CONFIG, LOCAL } from './globals.js'
 import Command from './command.js'
 import ShellQueue from './shell queue.js'
 
@@ -11,7 +11,7 @@ const confirmUser = async (shellQueue, user) => {
     undefined,
     undefined,
     true,
-    shellQueue
+    shellQueue,
   )
   if (whoami.output !== `${user}\n`) {
     shellQueue.shutdown()
@@ -24,7 +24,7 @@ const sudoInteractionHandler = (
   sudoCmd,
   stdout,
   user,
-  password
+  password,
 ) => {
   if (stdout !== 'PaxsWord') {
     let msg
@@ -33,8 +33,6 @@ const sudoInteractionHandler = (
     else if (stdout.includes('Sorry, try again.'))
       msg = `${LOCAL.wrongPassword}`
     else msg = `login failed: ${stdout}`
-    // sudo._command.fail()
-    // reject(new Error(msg))
     shellQueue.handleCommandFinished(true, new Error(msg))
   } else {
     setTimeout(() => {
@@ -44,32 +42,29 @@ const sudoInteractionHandler = (
   }
 }
 
-const sudo = (shellQueue, user, password) => {
-  return new Promise((resolve, reject) => {
-    const sudoCmd = new Command(
-      shellQueue.shellHarness,
-      `sudo -K && sudo -p PaxsWord -S su ${user} 2>&1 ;\n`,
-      undefined,
-      undefined,
-      false,
-      shellQueue
-    )
-    sudoCmd.on('data', stdout =>
-      sudoInteractionHandler(shellQueue, sudoCmd, stdout, user, password)
-    )
-    sudoCmd
-      .then(() => {
-        resolve(confirmUser(shellQueue, user))
-      })
-      .catch(error => {
-        shellQueue.shutdown()
-        reject(error)
-      })
-  })
-}
+const sudo = (shellQueue, user, password) => new Promise((resolve, reject) => {
+  const sudoCmd = new Command(
+    shellQueue.shellHarness,
+    `sudo -K && sudo -p PaxsWord -S su ${user} 2>&1 ;\n`,
+    undefined,
+    undefined,
+    false,
+    shellQueue,
+  )
+  sudoCmd.on('data', (stdout) => sudoInteractionHandler(shellQueue, sudoCmd, stdout, user, password));
+  (async () => {
+    try {
+      await sudoCmd
+      resolve(confirmUser(shellQueue, user))
+    } catch (error) {
+      shellQueue.shutdown()
+      reject(error)
+    }
+  })()
+})
 
-const initScript = async shellQueue => {
-  const {shellHarness} = shellQueue
+const initScript = async (shellQueue) => {
+  const { shellHarness } = shellQueue
   if (shellHarness.config.initScript) {
     if (shellHarness.config.initScript instanceof Promise)
       shellHarness.config.initScript = await shellHarness.config.initScript
@@ -80,7 +75,7 @@ const initScript = async shellQueue => {
         undefined,
         undefined,
         true,
-        shellQueue
+        shellQueue,
       )
     } catch (error) {
       shellQueue.shutdown()
@@ -89,7 +84,7 @@ const initScript = async shellQueue => {
   }
 }
 
-const initShellQueue = async shellHarness => {
+const initShellQueue = async (shellHarness) => {
   const shellQueue = new ShellQueue(shellHarness)
 
   if (shellHarness.config.user) {
@@ -98,7 +93,7 @@ const initShellQueue = async shellHarness => {
     await sudo(
       shellQueue,
       shellHarness.config.user,
-      shellHarness.config.rootPassword
+      shellHarness.config.rootPassword,
     )
   }
 
@@ -109,7 +104,8 @@ const initShellQueue = async shellHarness => {
 
 /**
  * A pool of ShellQueues - each ShellQueue has one shell.  Incoming commands/scripts
- * are allocated to ShellQueue by reference to number of currently running commands - so basic load balancing
+ * are allocated to ShellQueue by reference to number of currently running commands
+ * so basic load balancing
  * Can also spawn a ShellQueues as root or other user if specified in config.
  * @export
  * @class ShellHarness
@@ -118,13 +114,13 @@ export default class ShellHarness {
   constructor(config) {
     this._config = {
       ...DEFAULT_CONFIG,
-      ...config
+      ...config,
     }
-    if (this.config.logger) {
-      this.logger = this.config.logger
-    }
+    if (this.config.logger) this.logger = this.config.logger
 
     if (this.config.sudoWait) sudoWait = this.config.sudoWait
+
+    this.commandQueue = []
   }
 
   get config() {
@@ -133,25 +129,25 @@ export default class ShellHarness {
 
   async shells() {
     if (this._shells) return this._shells
-    if (this.spawningShellsPromise) this.spawningShellsPromise
-    const shells = []
-    const cnt = this.config.numberOfProcesses
-    for (let step = 0; step < cnt; step += 1) {
-      shells.push(initShellQueue(this)) // slow sequential process is required by sudo command
-    }
-    this.spawningShellsPromise = new Promise(resolve=>{
-      try {
-        Promise.all(shells).then(shellArray => {
-          this._shells = shellArray
+    if (this.spawningShellsPromise) return this.spawningShellsPromise
+    this.spawningShellsPromise = new Promise((resolve, reject) => {
+      (async () => {
+        try {
+          this._shells = []
+          const cnt = this.config.numberOfProcesses
+          // slow sequential process is required by sudo command
+          for (let step = 0; step < cnt; step += 1)
+            // eslint-disable-next-line no-await-in-loop
+            this._shells.push(await initShellQueue(this))
+          resolve(this._shells)
+        } catch (error) {
+          this.close()
+          reject(error)
+        } finally {
           delete this.spawningShellsPromise
-          resolve(shellArray)
-        })
-      } catch (error) {
-        this.close()
-        throw error
-      } finally {
-        delete this.config.rootPassword
-      }
+          delete this.config.rootPassword
+        }
+      })()
     })
     return this.spawningShellsPromise
   }
@@ -161,43 +157,44 @@ export default class ShellHarness {
    *
    * @param {String} [command] - the command to run terminated by a semi-colon ;
    * @param {Object} [doneCBPayload] - an object to pass to the doneCallback function
-   * @param {Function} [doneCallback=this.config.doneCallback] - callback function before command is completed
+   * @param {Function} [doneCallback=this.config.doneCallback] -
+   *                   callback function before command is completed
    * @param {Boolean} [sendToEveryShell=false] - send this command to every shell
-   * @returns {CommandIFace} a promise that will resolve once the command is completed
+   * @returns {CommandIFace->Command} a promise that will resolve once the command is completed
    */
   createCommand(
     command,
     doneCBPayload,
     doneCallback = this.config.doneCallback,
-    sendToEveryShell = false
+    sendToEveryShell = false,
   ) {
     if (!sendToEveryShell)
       return new Command(this, command, doneCBPayload, doneCallback, true)
     return (async () => {
       const shells = await this.shells()
       return Promise.all(
-        shells.map(shell => {
-          return new Command(
-            this,
-            command,
-            doneCBPayload,
-            doneCallback,
-            true,
-            shell
-          )
-        })
+        shells.map((shell) => new Command(
+          this,
+          command,
+          doneCBPayload,
+          doneCallback,
+          true,
+          shell,
+        )),
       )
     })()
   }
 
   /**
-   * creates a new promise that will execute the provided command.  To complete the promise you must send
+   * creates a new promise that will execute the provided command.
+   * To complete the promise you must send
    * cmd.sendDoneMarker()
    *
    * @param {string} command - the command to run terminated by a semi-colon ;
    * @param {object} [doneCBPayload] - an object to pass to the doneCallback function
-   * @param {function} [doneCallback=this.config.doneCallback] - callback function before command is completed
-   * @returns {CommandIFace} a promise that will resolve once the command is completed
+   * @param {function} [doneCallback=this.config.doneCallback]
+   *                                    callback function before command is completed
+   * @returns {CommandIFace->Command} a promise that will resolve once the command is completed
    * @memberof ShellHarness
    */
 
@@ -205,20 +202,38 @@ export default class ShellHarness {
     return new Command(this, command, doneCBPayload, doneCallback, false)
   }
 
-  async getQueue() {
-    try {
-      const shells = await this.shells()
-      let min = shells[0].length + 1
-      let shellQueue = {}
-      shells.forEach(sQueue => {
-        if (sQueue.length < min) {
-          min = sQueue.length
-          shellQueue = sQueue
-        }
-      })
-      return shellQueue
-    } catch (e) {
-      throw e
+  // async getQueue() {
+  //   const shells = this._shells || await this.shells()
+  //   let min = shells[0].length + 1
+  //   let shellQueue = shells[0]
+  //   if (min !== 1) {
+  //     shells.forEach((sQueue) => {
+  //       if (sQueue.length < min) {
+  //         min = sQueue.length
+  //         shellQueue = sQueue
+  //       }
+  //     })
+  //   }
+  //   return shellQueue
+  // }
+
+  async enqueue(command) {
+    await this.shells() // ensure shells launched
+    this.commandQueue.push(command)
+    command.commandIFace.emit('enqueued', command.commandIFace)
+    return this.crankQueue()
+  }
+
+  crankQueue() {
+    const cmd = this.commandQueue[0]
+    if (cmd) {
+      const shells = this._shells
+      const shell = shells.find((shl) => shl.hasCapacity)
+      if (shell) {
+        this.commandQueue.shift()
+        shell.enqueue(cmd)
+        this.crankQueue()
+      }
     }
   }
 
@@ -229,20 +244,20 @@ export default class ShellHarness {
    */
   close() {
     if (this._shells && this._shells.constructor.name !== 'Error') {
-      this._shells.forEach(queue => queue.shutdown())
+      this._shells.forEach((queue) => queue.shutdown())
       this._shells = undefined
     }
   }
 
-  /**
-   * number of commands currently executing
-   *
-   * @readonly
-   * @memberof ShellHarness
-   */
-  get runningCommands() {
-    return this._shells
-      ? this._shells.reduce((a, b) => a + (b.length || 0), 0)
-      : 0
-  }
+  // /**
+  //  * number of commands currently executing
+  //  *
+  //  * @readonly
+  //  * @memberof ShellHarness
+  //  */
+  // get runningCommands() {
+  //   return this._shells
+  //     ? this._shells.reduce((a, b) => a + (b.length || 0), 0)
+  //     : 0
+  // }
 }

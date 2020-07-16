@@ -47,6 +47,7 @@ export default class Command {
   ) {
     this.commandIFace = new CommandIFace(this)
     this.shellHarness = shellHarness
+    this.shellQueue = shellQueue
     this.command = command
     markerCounter += 1
     this.doneMarker = `${
@@ -63,22 +64,31 @@ export default class Command {
     this.doneCBPayload = doneCBPayload
     this.state = 'created'
     this.autoDone = autoDone
-    // eslint-disable-next-line no-async-promise-executor
     this.promise = new Promise((resolve, reject) => {
       this.resolve = resolve
-      this.reject = reject;
-      (async () => {
-        try {
-          if (!shellQueue) shellQueue = await this.shellHarness.getQueue()
-          this.enqueuedAt = new Date()
-          this.state = 'enqueued'
-          shellQueue.enqueue(this)
-        } catch (e) {
-          this.fail(e)
-        }
-      })()
+      this.reject = reject
     })
     return this.commandIFace
+  }
+
+  then(...args) {
+    (async () => {
+      try {
+        this.enqueuedAt = new Date()
+        this.state = 'enqueued'
+        if (this.shellQueue)
+          this.shellQueue.enqueue(this)
+        else
+          await this.shellHarness.enqueue(this)
+      } catch (e) {
+        this.fail(e)
+      }
+    })()
+    return this.promise.then(...args)
+  }
+
+  catch(...args) {
+    return this.promise.catch(...args)
   }
 
   run(shellQueue) {

@@ -16,12 +16,10 @@ export const DEFAULT_CONFIG = {
   user: undefined,
   rootPassword: undefined,
 
-  numberOfProcesses: 1,
-  concurrentCmds: 100,
+  numberOfProcesses: 4,
+  concurrentCmds: 10,
 
   doneMarker: '__done__',
 
   sudoWait: 100,
-
-  log: true,
 }

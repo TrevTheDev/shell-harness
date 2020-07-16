@@ -3,7 +3,7 @@
 Shell Harness provides an easy way to interact with shell commands and scripts. Benefits:
 
 - an initial script can be run to set context for all subsequent commands
-- all commands are run in a long running Child Processes vs. a Child Processes for each command
+- all commands run in a long-running Child Processes vs. a Child Processes for each command.  This can be significantly faster than spawning new processes for each command.  36 times faster in one benchmark.
 - Multiple shells can be spawned to run commands in parallel
 - Commands are queued in a FIFO manner
 

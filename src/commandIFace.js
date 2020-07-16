@@ -7,8 +7,12 @@ export default class CommandIFace extends EventEmitter {
     this._command = command
   }
 
-  then(...pmsArgs) {
-    return this._command.promise.then(...pmsArgs)
+  then(...args) {
+    return this._command.then(...args)
+  }
+
+  catch(...args) {
+    return this._command.catch(...args)
   }
 
   /**

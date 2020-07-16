@@ -12,7 +12,6 @@ export default class ShellQueue extends Array {
     super(...items)
     this._shellHarness = shellHarness
     this.state = 'init'
-    this.commandsRunning = 0
     if (this.shellHarness.logger) {
       this.shellHarness.logger.info(
         `Spawning process: ${shellHarness.config.shell}`,
@@ -91,10 +90,13 @@ export default class ShellQueue extends Array {
     this.state = 'online'
   }
 
+  get hasCapacity() {
+    return (this.length <= this.shellHarness.config.concurrentCmds)
+  }
+
   enqueue(command) {
     this.push(command)
-    command.commandIFace.emit('enqueued', command.commandIFace)
-    this.topUpExecution()
+    command.run(this)
   }
 
   get shellHarness() {
@@ -148,19 +150,20 @@ export default class ShellQueue extends Array {
 
   handleCommandFinished(inError, failPayload = undefined) {
     const cmd = this.shift()
-    this.commandsRunning -= 1
-    this.topUpExecution()
     if (failPayload) cmd.fail(failPayload)
     else cmd.finish(inError)
+    this.shellHarness.crankQueue()
   }
 
-  topUpExecution() {
-    if (this.length <= this.commandsRunning) return // all commands are running
-    // too many commands are running
-    if (this.commandsRunning >= this.shellHarness.config.concurrentCmds) return
-    const cmd = this[this.commandsRunning]
-    this.commandsRunning += 1
-    cmd.run(this)
-    this.topUpExecution()
-  }
+  // topUpExecution() {
+  //   console.log(this.length)
+  //   if (this.length <= this.commandsRunning) return // all commands are running
+  //   // too many commands are running
+  //   if (this.commandsRunning >= this.shellHarness.config.concurrentCmds) return
+  //   const cmd = this[this.commandsRunning]
+  //   this.commandsRunning += 1
+  //   cmd.run(this)
+  //   // top up as much as possible
+  //   this.topUpExecution()
+  // }
 }

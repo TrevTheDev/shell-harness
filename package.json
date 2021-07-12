@@ -1,6 +1,6 @@
 {
   "name": "@trevthedev/shell-harness",
-  "version": "1.0.14",
+  "version": "1.0.15",
   "description": "queues and runs shell scripts",
   "keywords": [
     "shell",
@@ -39,7 +39,7 @@
     "nyc": "^15.1.0"
   },
   "engines": {
-    "node": "^15.5.1"
+    "node": ">16.0.0"
   },
   "type": "module",
   "main": "./src/shell harness.js",
